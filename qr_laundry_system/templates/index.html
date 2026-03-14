@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Hostel Laundry</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom right, #28a745, #007bff);
+            color: #fff;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .container {
+            width: 750px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+        }
+
+        header {
+            text-align:center;
+            font-size:2em;
+            font-weight:bold;
+            margin-bottom: 20px;
+            text-shadow: 1px 1px 3px #000;
+        }
+
+        .status {
+            padding:12px;
+            margin:10px 0;
+            border-radius:10px;
+            font-weight:bold;
+            font-size:1.1em;
+            text-align:center;
+        }
+        .working { background-color: #28a745; color:white; }
+        .notworking { background-color: #dc3545; color:white; }
+        .available { background-color: #28a745; color:white; }
+        .busy { background-color: #dc3545; color:white; }
+
+        .top-links {
+            text-align:center;
+            margin-bottom:20px;
+        }
+        .top-links a {
+            color:#007bff;
+            text-decoration:none;
+            font-weight:bold;
+            margin:0 10px;
+        }
+        .top-links a:hover { text-decoration:underline; }
+
+        .box {
+            margin:20px 0;
+        }
+
+        select, button, input {
+            padding:10px;
+            margin:10px 0;
+            border-radius:5px;
+            border:none;
+            font-size:1em;
+        }
+
+        button {
+            background:#4418d6;
+            color:white;
+            cursor:pointer;
+            font-weight:bold;
+        }
+        button:hover { background:#4418d6; }
+
+        table {
+            width:100%;
+            border-collapse: collapse;
+            margin-top:10px;
+        }
+        table th, table td {
+            border:1px solid #ccc;
+            padding:10px;
+            text-align:center;
+        }
+        table th {
+            background: #4418d6;
+            color:white;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <header>Smart Hostel Laundry</header>
+
+    <!-- Machine Health -->
+    {% if machine_status=="Not Working" %}
+    <div class="status notworking">🚫 Machine NOT WORKING</div>
+    {% else %}
+    <div class="status working">✅ Machine WORKING</div>
+    {% endif %}
+
+    <!-- Machine Usage -->
+    {% if usage_status=="Busy" %}
+    <div class="status busy">⏳ Machine BUSY</div>
+    {% else %}
+    <div class="status available">🟢 Machine AVAILABLE</div>
+    {% endif %}
+
+    <div class="top-links">
+        <a href="/toggle_machine">Toggle Machine Status</a> | 
+        <a href="/logout">Logout</a>
+    </div>
+
+    <!-- Book Slot -->
+    <div class="box">
+        <h2>Book a Slot</h2>
+        <form action="/book" method="POST">
+            <label>Select Mode:</label><br>
+            <select name="mode">
+                <option value="Quick Wash">Quick Wash (1 min)</option>
+                <option value="Normal Wash">Normal Wash (3 min)</option>
+                <option value="Heavy Wash">Heavy Wash (4 min)</option>
+            </select><br>
+            <button type="submit">Book Now</button>
+        </form>
+    </div>
+
+    <!-- Queue -->
+    <div class="box">
+        <h2>Queue</h2>
+        {% if bookings %}
+        <table>
+            <tr>
+                <th>User</th>
+                <th>Mode</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Action</th>
+            </tr>
+            {% for b in bookings %}
+            <tr>
+                <td>{{b[1]}}</td>
+                <td>{{b[2]}}</td>
+                <td>{{b[3]}}</td>
+                <td>{{b[4]}}</td>
+                <td><a href="/cancel/{{b[0]}}">Cancel</a></td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% else %}
+        <p>No bookings yet</p>
+        {% endif %}
+
+    </div>
+
+
+</div>
+
+</body>
+</html>
