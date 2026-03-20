@@ -71,7 +71,7 @@ def register():
 # ---------------- LOGIN ----------------
 @app.route("/")
 def home():
-    return "Working Home Page ✅"
+    return redirect(url_for("login"))
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
