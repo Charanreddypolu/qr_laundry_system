@@ -140,7 +140,7 @@ def book():
         return redirect(url_for("login"))
 
     mode = request.form["mode"]  # Example: "Quick Wash"
-    durations = {"Quick Wash":1, "Normal Wash":3, "Heavy Wash":4}
+    durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
@@ -153,7 +153,9 @@ def book():
         return "Machine is not working!"
 
     # Calculate start and end times
-    now = datetime.now()
+    import pytz
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
     cursor.execute("SELECT end_time FROM bookings ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
     if last:
@@ -189,7 +191,7 @@ def cancel(id):
     # Recalculate queue
     cursor.execute("SELECT id, mode FROM bookings ORDER BY id")
     bookings = cursor.fetchall()
-    durations = {"Quick Wash":1, "Normal Wash":3, "Heavy Wash":4}
+    durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
     current_time = datetime.now()
     for booking in bookings:
