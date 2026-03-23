@@ -161,11 +161,11 @@ if not mode:
     cursor.execute("SELECT end_time FROM bookings ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
    if last:
-    last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
-    last_end = ist.localize(last_end)   # ✅ FIX
-    start_time = max(now, last_end)
+       last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
+       last_end = ist.localize(last_end)   # ✅ FIX
+       start_time = max(now, last_end)
    else:
-    start_time = now
+       start_time = now
 
     duration = durations.get(mode, 10)
 end_time = start_time + timedelta(minutes=duration)
