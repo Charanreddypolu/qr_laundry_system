@@ -136,18 +136,20 @@ def book():
     if not mode:
         return redirect(url_for("index"))
 
-    durations = {"Quick Wash": 10, "Normal Wash": 30, "Heavy Wash": 45}
+    durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
+    # Machine status check
     cursor.execute("SELECT status FROM machine WHERE id=1")
     status = cursor.fetchone()[0]
-
     if status == "Not Working":
         conn.close()
         return "Machine is not working!"
 
+    # Time calculation (IST)
+    import pytz
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
 
@@ -161,15 +163,18 @@ def book():
     else:
         start_time = now
 
-    duration = durations.get(mode, 10)
-    end_time = start_time + timedelta(minutes=duration)
+    end_time = start_time + timedelta(minutes=durations.get(mode, 10))
 
+    # Insert booking
     cursor.execute("""
         INSERT INTO bookings (username, mode, start_time, end_time)
         VALUES (?,?,?,?)
-    """, (session["username"], mode,
-          start_time.strftime("%Y-%m-%d %H:%M:%S"),
-          end_time.strftime("%Y-%m-%d %H:%M:%S")))
+    """, (
+        session["username"],
+        mode,
+        start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        end_time.strftime("%Y-%m-%d %H:%M:%S")
+    ))
 
     conn.commit()
     conn.close()
