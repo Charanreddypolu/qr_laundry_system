@@ -139,7 +139,9 @@ def book():
     if "username" not in session:
         return redirect(url_for("login"))
 
-    mode = request.form["mode"]  # Example: "Quick Wash"
+    mode = request.form.get("mode")
+if not mode:
+    return redirect(url_for("index"))  # Example: "Quick Wash"
     durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
     conn = sqlite3.connect(DATABASE)
@@ -158,13 +160,15 @@ def book():
     now = datetime.now(ist)
     cursor.execute("SELECT end_time FROM bookings ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
-    if last:
-        last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
-        start_time = max(now,last_end)
-    else:
-        start_time = now
+   if last:
+    last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
+    last_end = ist.localize(last_end)   # ✅ FIX
+    start_time = max(now, last_end)
+   else:
+    start_time = now
 
-    end_time = start_time + timedelta(minutes=durations[mode])
+    duration = durations.get(mode, 10)
+end_time = start_time + timedelta(minutes=duration)
 
     # Insert booking
     cursor.execute("""
@@ -193,7 +197,9 @@ def cancel(id):
     bookings = cursor.fetchall()
     durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
-    current_time = datetime.now()
+    import pytz
+ist = pytz.timezone('Asia/Kolkata')
+current_time = datetime.now(ist)
     for booking in bookings:
         booking_id = booking[0]
         mode = booking[1]
