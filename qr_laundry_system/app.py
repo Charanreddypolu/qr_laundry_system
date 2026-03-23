@@ -59,10 +59,11 @@ def register():
             conn.commit()
             conn.close()
             return redirect(url_for("login"))
-        except:
+        except sqlite3.IntegrityError:
             return "Username already exists!"
-
-    return render_template("register.html")
+        except Exception as e:
+            return f"Error: {e}"
+    
 
 # ---------------- LOGIN ----------------
 @app.route("/")
