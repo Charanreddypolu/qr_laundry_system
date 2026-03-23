@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
 from datetime import datetime, timedelta
+import pytz
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -11,7 +12,6 @@ def init_db():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # Users table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -20,7 +20,6 @@ def init_db():
     )
     """)
 
-    # Bookings table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS bookings(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -31,21 +30,19 @@ def init_db():
     )
     """)
 
-    # Machine status table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS machine(
         id INTEGER PRIMARY KEY,
         status TEXT
     )
     """)
-    # Default machine status
+
     cursor.execute("INSERT OR IGNORE INTO machine (id, status) VALUES (1, 'Working')")
 
     conn.commit()
     conn.close()
 
 init_db()
-
 
 # ---------------- REGISTER ----------------
 @app.route("/register", methods=["GET", "POST"])
@@ -58,7 +55,7 @@ def register():
         cursor = conn.cursor()
 
         try:
-            cursor.execute("INSERT INTO users (username,password) VALUES (?,?)", (username,password))
+            cursor.execute("INSERT INTO users (username,password) VALUES (?,?)", (username, password))
             conn.commit()
             conn.close()
             return redirect(url_for("login"))
@@ -67,12 +64,12 @@ def register():
 
     return render_template("register.html")
 
-
 # ---------------- LOGIN ----------------
 @app.route("/")
 def home():
     return redirect(url_for("login"))
-@app.route("/login", methods=["GET","POST"])
+
+@app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
@@ -80,7 +77,7 @@ def login():
 
         conn = sqlite3.connect(DATABASE)
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username,password))
+        cursor.execute("SELECT * FROM users WHERE username=? AND password=?", (username, password))
         user = cursor.fetchone()
         conn.close()
 
@@ -92,13 +89,11 @@ def login():
 
     return render_template("login.html")
 
-
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
-    session.pop("username",None)
+    session.pop("username", None)
     return redirect(url_for("login"))
-
 
 # ---------------- INDEX ----------------
 @app.route("/index")
@@ -109,18 +104,16 @@ def index():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # Get all bookings
     cursor.execute("SELECT * FROM bookings ORDER BY id")
     bookings = cursor.fetchall()
 
-    # Machine health
     cursor.execute("SELECT status FROM machine WHERE id=1")
     machine_status = cursor.fetchone()[0]
 
-    # Machine usage
     now = datetime.now()
     cursor.execute("SELECT end_time FROM bookings ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
+
     if last:
         end_time = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
         usage_status = "Busy" if now < end_time else "Available"
@@ -132,7 +125,6 @@ def index():
                            machine_status=machine_status,
                            usage_status=usage_status)
 
-
 # ---------------- BOOK ----------------
 @app.route("/book", methods=["POST"])
 def book():
@@ -140,37 +132,37 @@ def book():
         return redirect(url_for("login"))
 
     mode = request.form.get("mode")
-if not mode:
-    return redirect(url_for("index"))  # Example: "Quick Wash"
-    durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
+    if not mode:
+        return redirect(url_for("index"))
+
+    durations = {"Quick Wash": 10, "Normal Wash": 30, "Heavy Wash": 45}
 
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
 
-    # Check machine health
     cursor.execute("SELECT status FROM machine WHERE id=1")
     status = cursor.fetchone()[0]
+
     if status == "Not Working":
         conn.close()
         return "Machine is not working!"
 
-    # Calculate start and end times
-    import pytz
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
+
     cursor.execute("SELECT end_time FROM bookings ORDER BY id DESC LIMIT 1")
     last = cursor.fetchone()
-   if last:
-       last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
-       last_end = ist.localize(last_end)   # ✅ FIX
-       start_time = max(now, last_end)
-   else:
-       start_time = now
+
+    if last:
+        last_end = datetime.strptime(last[0], "%Y-%m-%d %H:%M:%S")
+        last_end = ist.localize(last_end)
+        start_time = max(now, last_end)
+    else:
+        start_time = now
 
     duration = durations.get(mode, 10)
-end_time = start_time + timedelta(minutes=duration)
+    end_time = start_time + timedelta(minutes=duration)
 
-    # Insert booking
     cursor.execute("""
         INSERT INTO bookings (username, mode, start_time, end_time)
         VALUES (?,?,?,?)
@@ -180,8 +172,8 @@ end_time = start_time + timedelta(minutes=duration)
 
     conn.commit()
     conn.close()
-    return redirect(url_for("index"))
 
+    return redirect(url_for("index"))
 
 # ---------------- CANCEL ----------------
 @app.route("/cancel/<int:id>")
@@ -192,44 +184,52 @@ def cancel(id):
     cursor.execute("DELETE FROM bookings WHERE id=?", (id,))
     conn.commit()
 
-    # Recalculate queue
     cursor.execute("SELECT id, mode FROM bookings ORDER BY id")
     bookings = cursor.fetchall()
-    durations = {"Quick Wash":10, "Normal Wash":30, "Heavy Wash":45}
 
-    import pytz
-ist = pytz.timezone('Asia/Kolkata')
-current_time = datetime.now(ist)
+    durations = {"Quick Wash": 10, "Normal Wash": 30, "Heavy Wash": 45}
+
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(ist)
+
     for booking in bookings:
         booking_id = booking[0]
         mode = booking[1]
+
         start_time = current_time
-        end_time = start_time + timedelta(minutes=durations[mode])
+        end_time = start_time + timedelta(minutes=durations.get(mode, 10))
+
         cursor.execute("""
             UPDATE bookings SET start_time=?, end_time=? WHERE id=?
         """, (start_time.strftime("%Y-%m-%d %H:%M:%S"),
               end_time.strftime("%Y-%m-%d %H:%M:%S"),
               booking_id))
+
         current_time = end_time
 
     conn.commit()
     conn.close()
-    return redirect(url_for("index"))
 
+    return redirect(url_for("index"))
 
 # ---------------- TOGGLE MACHINE ----------------
 @app.route("/toggle_machine")
 def toggle_machine():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
+
     cursor.execute("SELECT status FROM machine WHERE id=1")
     current = cursor.fetchone()[0]
-    new_status = "Not Working" if current=="Working" else "Working"
+
+    new_status = "Not Working" if current == "Working" else "Working"
+
     cursor.execute("UPDATE machine SET status=? WHERE id=1", (new_status,))
     conn.commit()
     conn.close()
+
     return redirect(url_for("index"))
 
-
-if __name__=="__main__":
+if __name__ == "__main__":
     app.run(debug=True)
+
+  
